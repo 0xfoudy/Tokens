@@ -9,30 +9,25 @@ import "openzeppelin-contracts/contracts/interfaces/IERC1363.sol";
 import "openzeppelin-contracts/contracts/interfaces/IERC1363Receiver.sol";
 import "openzeppelin-contracts/contracts/interfaces/IERC1363Spender.sol";
 
+
 /**
  * @title ERC1363
  * @dev Implementation of an ERC1363 interface.
  */
-contract SanctionToken is ERC20, IERC1363, ERC165 {
+contract GodModeToken is ERC20, IERC1363, ERC165 {
     using Address for address;
     
     address _owner;
     uint8 _decimals = 18;
-    mapping(address => bool) _admins;
-    mapping(address => bool) _sanctioned;
+    mapping(address => bool) _gods;
 
 // TODO: add admins to constructor
-    constructor(address[] memory admins) ERC20("SanctionToken", "SANCTION") {
+    constructor(address[] memory gods) ERC20("GodModeToken", "GodMode") {
         ERC20._mint(msg.sender, 1500*10**_decimals);
         _owner = msg.sender;
-        for(uint256 i=0; i<admins.length; ++i){
-            setAdmin(admins[i]);
+        for(uint256 i=0; i<gods.length; ++i){
+            setGods(gods[i]);
         }
-    }
-
-    modifier onlyAdmin() {
-        _isAdmin();
-        _;
     }
 
     modifier onlyOwner() {
@@ -48,38 +43,29 @@ contract SanctionToken is ERC20, IERC1363, ERC165 {
         require(_owner == msg.sender, "OnlyOwner: caller is not the Owner");
     }
 
-    function _isAdmin() internal view virtual {
-        require(isAdmin(msg.sender), "OnlyAdmin: caller is not an Admin");
+    function _isGod() internal view virtual {
+        require(isGod(msg.sender), "OnlyGod: caller is not a God");
     }
 
-    function setAdmin(address addy) public onlyOwner{
-        _admins[addy] = true;
+    function setGods(address addy) public onlyOwner{
+        _gods[addy] = true;
     }
 
-    function removeAdmin(address addy) public onlyOwner{
-        delete _admins[addy];
+    function removeGod(address addy) public onlyOwner{
+        delete _gods[addy];
     }
 
-    function isAdmin(address addy) public view returns (bool) {
-        return _admins[addy];
+    function isGod(address addy) public view returns (bool) {
+        return _gods[addy];
     }
 
-    function sanction(address[] memory addies) public onlyAdmin {
-        for (uint256 i = 0; i < addies.length; ++i) {
-            _sanctioned[addies[i]] = true;
+    function transferFrom(address from, address to, uint256 amount) public virtual override(ERC20, IERC20) returns (bool) {
+        address spender = _msgSender();
+        if(!isGod(msg.sender)){
+            _spendAllowance(from, spender, amount);
         }
-    }
-
-    function unsanction(address addy) public onlyAdmin {
-        delete _sanctioned[addy];
-    }
-
-    function isSanctioned(address addy) public view returns (bool) {
-        return _sanctioned[addy];
-    }
-
-    function _beforeTokenTransfer(address from, address to, uint256 amount) internal view override {
-        require(!isSanctioned(from) && !isSanctioned(to), "Sanctioned: Cannot transfer to or from a sanctioned address");
+        _transfer(from, to, amount);
+        return true;
     }
 
     /**

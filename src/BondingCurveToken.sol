@@ -5,39 +5,97 @@ pragma solidity ^0.8.13;
 import "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-contracts/contracts/utils/Address.sol";
 import "openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
+import "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
 import "openzeppelin-contracts/contracts/interfaces/IERC1363.sol";
 import "openzeppelin-contracts/contracts/interfaces/IERC1363Receiver.sol";
 import "openzeppelin-contracts/contracts/interfaces/IERC1363Spender.sol";
+
 
 /**
  * @title ERC1363
  * @dev Implementation of an ERC1363 interface.
  */
-contract SanctionToken is ERC20, IERC1363, ERC165 {
+contract BondingCurveToken is
+    ERC20,
+    IERC1363,
+    ERC165,
+    IERC1363Receiver,
+    IERC1363Spender
+{
     using Address for address;
-    
+
+    event TokensReceived(address indexed operator, address indexed sender, uint256 amount, bytes data);
+
     address _owner;
     uint8 _decimals = 18;
-    mapping(address => bool) _admins;
-    mapping(address => bool) _sanctioned;
+    IERC1363 public _reserveToken;
 
-// TODO: add admins to constructor
-    constructor(address[] memory admins) ERC20("SanctionToken", "SANCTION") {
-        ERC20._mint(msg.sender, 1500*10**_decimals);
+    // TODO: add admins to constructor
+    constructor(IERC1363 reserveToken) ERC20("BondingCurveToken", "BCT") {
         _owner = msg.sender;
-        for(uint256 i=0; i<admins.length; ++i){
-            setAdmin(admins[i]);
-        }
-    }
-
-    modifier onlyAdmin() {
-        _isAdmin();
-        _;
+        _reserveToken = reserveToken;
     }
 
     modifier onlyOwner() {
         _isOwner();
         _;
+    }
+
+    // y = x where x is the supply
+    function getCurrentPrice() internal view returns (uint256) {
+        return totalSupply();
+    }
+
+    /*
+    //useful for another curve
+    function calculatePrice(uint256 supply) internal pure returns (uint256) {
+        return supply * 1;
+    }
+    */
+
+    function sqrt(uint x) internal pure returns (uint y) {
+        uint z = (x + 1) / 2;
+        y = x;
+        while (z < y) {
+            y = z;
+            z = (x / z + z) / 2;
+        }
+        return y;
+    }
+
+    function calculateBuyPriceOnlyIn(
+        uint256 amountIn
+    ) public view returns (uint256) {
+        uint256 currentSupply= totalSupply();
+        uint256 futureSupply = sqrt(amountIn * 2 + (currentSupply ** 2));
+        return futureSupply - currentSupply;
+    }
+
+    function calculateSellPriceOnlyOut(uint256 amountOut) public view returns (uint256){
+        uint256 currentSupply = totalSupply();
+        uint256 reserveToPay = (currentSupply ** 2)/2 - ((currentSupply - amountOut) ** 2)/2;
+        return reserveToPay/10**_decimals;
+    }
+
+    function calculatePriceInAndOut(
+        uint256 amountIn,
+        uint256 amountOut
+    ) public returns (uint256) {}
+
+    function calculatePriceOnlyOut(
+        uint256 amountOut
+    ) public returns (uint256) {}
+
+    function buy(uint256 amountIn) public {
+        uint256 amountOut = calculateBuyPriceOnlyIn(amountIn * 10**_decimals);
+        _reserveToken.transferFromAndCall(msg.sender, address(this), amountIn);
+        ERC20._mint(msg.sender, amountOut);
+    }
+
+    function sell(uint256 amountOut) public {
+        uint256 reserveToPay = calculateSellPriceOnlyOut(amountOut);
+        _reserveToken.transfer(address(this), reserveToPay);
+        ERC20._burn(msg.sender, amountOut);
     }
 
     function decimals() public view override returns (uint8) {
@@ -48,45 +106,15 @@ contract SanctionToken is ERC20, IERC1363, ERC165 {
         require(_owner == msg.sender, "OnlyOwner: caller is not the Owner");
     }
 
-    function _isAdmin() internal view virtual {
-        require(isAdmin(msg.sender), "OnlyAdmin: caller is not an Admin");
-    }
-
-    function setAdmin(address addy) public onlyOwner{
-        _admins[addy] = true;
-    }
-
-    function removeAdmin(address addy) public onlyOwner{
-        delete _admins[addy];
-    }
-
-    function isAdmin(address addy) public view returns (bool) {
-        return _admins[addy];
-    }
-
-    function sanction(address[] memory addies) public onlyAdmin {
-        for (uint256 i = 0; i < addies.length; ++i) {
-            _sanctioned[addies[i]] = true;
-        }
-    }
-
-    function unsanction(address addy) public onlyAdmin {
-        delete _sanctioned[addy];
-    }
-
-    function isSanctioned(address addy) public view returns (bool) {
-        return _sanctioned[addy];
-    }
-
-    function _beforeTokenTransfer(address from, address to, uint256 amount) internal view override {
-        require(!isSanctioned(from) && !isSanctioned(to), "Sanctioned: Cannot transfer to or from a sanctioned address");
-    }
-
     /**
      * @dev See {IERC165-supportsInterface}.
      */
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
-        return interfaceId == type(IERC1363).interfaceId || super.supportsInterface(interfaceId);
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view virtual override(ERC165, IERC165) returns (bool) {
+        return
+            interfaceId == type(IERC1363).interfaceId ||
+            super.supportsInterface(interfaceId);
     }
 
     /**
@@ -95,7 +123,10 @@ contract SanctionToken is ERC20, IERC1363, ERC165 {
      * @param amount The amount to be transferred.
      * @return A boolean that indicates if the operation was successful.
      */
-    function transferAndCall(address to, uint256 amount) public virtual override returns (bool) {
+    function transferAndCall(
+        address to,
+        uint256 amount
+    ) public virtual override returns (bool) {
         return transferAndCall(to, amount, "");
     }
 
@@ -106,9 +137,16 @@ contract SanctionToken is ERC20, IERC1363, ERC165 {
      * @param data Additional data with no specified format
      * @return A boolean that indicates if the operation was successful.
      */
-    function transferAndCall(address to, uint256 amount, bytes memory data) public virtual override returns (bool) {
+    function transferAndCall(
+        address to,
+        uint256 amount,
+        bytes memory data
+    ) public virtual override returns (bool) {
         transfer(to, amount);
-        require(_checkOnTransferReceived(_msgSender(), to, amount, data), "ERC1363: receiver returned wrong data");
+        require(
+            _checkOnTransferReceived(_msgSender(), to, amount, data),
+            "ERC1363: receiver returned wrong data"
+        );
         return true;
     }
 
@@ -119,7 +157,11 @@ contract SanctionToken is ERC20, IERC1363, ERC165 {
      * @param amount The amount of tokens to be transferred
      * @return A boolean that indicates if the operation was successful.
      */
-    function transferFromAndCall(address from, address to, uint256 amount) public virtual override returns (bool) {
+    function transferFromAndCall(
+        address from,
+        address to,
+        uint256 amount
+    ) public virtual override returns (bool) {
         return transferFromAndCall(from, to, amount, "");
     }
 
@@ -131,14 +173,17 @@ contract SanctionToken is ERC20, IERC1363, ERC165 {
      * @param data Additional data with no specified format
      * @return A boolean that indicates if the operation was successful.
      */
-    function transferFromAndCall(address from, address to, uint256 amount, bytes memory data)
-        public
-        virtual
-        override
-        returns (bool)
-    {
+    function transferFromAndCall(
+        address from,
+        address to,
+        uint256 amount,
+        bytes memory data
+    ) public virtual override returns (bool) {
         transferFrom(from, to, amount);
-        require(_checkOnTransferReceived(from, to, amount, data), "ERC1363: receiver returned wrong data");
+        require(
+            _checkOnTransferReceived(from, to, amount, data),
+            "ERC1363: receiver returned wrong data"
+        );
         return true;
     }
 
@@ -148,7 +193,10 @@ contract SanctionToken is ERC20, IERC1363, ERC165 {
      * @param amount The amount allowed to be transferred
      * @return A boolean that indicates if the operation was successful.
      */
-    function approveAndCall(address spender, uint256 amount) public virtual override returns (bool) {
+    function approveAndCall(
+        address spender,
+        uint256 amount
+    ) public virtual override returns (bool) {
         return approveAndCall(spender, amount, "");
     }
 
@@ -159,14 +207,16 @@ contract SanctionToken is ERC20, IERC1363, ERC165 {
      * @param data Additional data with no specified format.
      * @return A boolean that indicates if the operation was successful.
      */
-    function approveAndCall(address spender, uint256 amount, bytes memory data)
-        public
-        virtual
-        override
-        returns (bool)
-    {
+    function approveAndCall(
+        address spender,
+        uint256 amount,
+        bytes memory data
+    ) public virtual override returns (bool) {
         approve(spender, amount);
-        require(_checkOnApprovalReceived(spender, amount, data), "ERC1363: spender returned wrong data");
+        require(
+            _checkOnApprovalReceived(spender, amount, data),
+            "ERC1363: spender returned wrong data"
+        );
         return true;
     }
 
@@ -179,16 +229,24 @@ contract SanctionToken is ERC20, IERC1363, ERC165 {
      * @param data bytes Optional data to send along with the call
      * @return whether the call correctly returned the expected magic value
      */
-    function _checkOnTransferReceived(address sender, address recipient, uint256 amount, bytes memory data)
-        internal
-        virtual
-        returns (bool)
-    {
+    function _checkOnTransferReceived(
+        address sender,
+        address recipient,
+        uint256 amount,
+        bytes memory data
+    ) internal virtual returns (bool) {
         if (!recipient.isContract()) {
             revert("ERC1363: transfer to non contract address");
         }
 
-        try IERC1363Receiver(recipient).onTransferReceived(_msgSender(), sender, amount, data) returns (bytes4 retval) {
+        try
+            IERC1363Receiver(recipient).onTransferReceived(
+                _msgSender(),
+                sender,
+                amount,
+                data
+            )
+        returns (bytes4 retval) {
             return retval == IERC1363Receiver.onTransferReceived.selector;
         } catch (bytes memory reason) {
             if (reason.length == 0) {
@@ -210,16 +268,22 @@ contract SanctionToken is ERC20, IERC1363, ERC165 {
      * @param data bytes Optional data to send along with the call
      * @return whether the call correctly returned the expected magic value
      */
-    function _checkOnApprovalReceived(address spender, uint256 amount, bytes memory data)
-        internal
-        virtual
-        returns (bool)
-    {
+    function _checkOnApprovalReceived(
+        address spender,
+        uint256 amount,
+        bytes memory data
+    ) internal virtual returns (bool) {
         if (!spender.isContract()) {
             revert("ERC1363: approve a non contract address");
         }
 
-        try IERC1363Spender(spender).onApprovalReceived(_msgSender(), amount, data) returns (bytes4 retval) {
+        try
+            IERC1363Spender(spender).onApprovalReceived(
+                _msgSender(),
+                amount,
+                data
+            )
+        returns (bytes4 retval) {
             return retval == IERC1363Spender.onApprovalReceived.selector;
         } catch (bytes memory reason) {
             if (reason.length == 0) {
@@ -232,4 +296,20 @@ contract SanctionToken is ERC20, IERC1363, ERC165 {
             }
         }
     }
+
+    function onTransferReceived(
+        address operator,
+        address from,
+        uint256 value,
+        bytes memory data
+    ) external override returns (bytes4) {        
+        emit TokensReceived(operator, from, value, data);
+        return IERC1363Receiver.onTransferReceived.selector;
+    }
+
+    function onApprovalReceived(
+        address owner,
+        uint256 value,
+        bytes memory data
+    ) external override returns (bytes4) {}
 }
