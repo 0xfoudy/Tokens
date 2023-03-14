@@ -64,7 +64,9 @@ contract BondingCurveToken is ERC20, IERC1363, ERC165, IERC1363Receiver, IERC136
     }
 
     // TODO: implement swap exact token for reserve, give back additional reserve
+    /* 
     function calculatePriceInAndOut(uint256 amountIn, uint256 amountOut) public returns (uint256) {}
+    */
 
     // Swap exact tokens for reserve
     function calculateSellPriceOnlyOut(uint256 amountOut) public view returns (uint256) {
@@ -73,12 +75,10 @@ contract BondingCurveToken is ERC20, IERC1363, ERC165, IERC1363Receiver, IERC136
         return reserveToPay / 10 ** _decimals;
     }
 
-    // Swap tokens for exact reserve
-    function calculateSellAmountToGet(uint256 amountToGet) public view returns (uint256) {
-        uint256 currentSupply = totalSupply();
-        uint256 reserveToPay = (currentSupply ** 2) / 2 - ((currentSupply - amountToGet) ** 2) / 2;
-        return reserveToPay / 10 ** _decimals;
-    }
+    /*
+    // TODO: Swap tokens for exact reserve
+    function calculateSellAmountToGet(uint256 amountToGet) public view returns (uint256) {}
+    */
 
     function buy(uint256 amountIn) public {
         uint256 amountOut = calculateBuyPriceOnlyIn(amountIn * 10 ** _decimals);
