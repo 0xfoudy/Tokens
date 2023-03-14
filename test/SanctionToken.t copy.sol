@@ -13,8 +13,8 @@ contract SanctionTokenTest is Test {
     address testUser;
     address[] toSanction = new address[](1);
     address[] adminsList = new address[](2);
-    uint256 decimals = 10**18;
-    
+    uint256 decimals = 10 ** 18;
+
     function setUp() public {
         owner = address(this);
         admin0 = address(0);
@@ -29,13 +29,13 @@ contract SanctionTokenTest is Test {
     }
 
     function testSetUp() public {
-        assertEq(sanctionToken.totalSupply(), 1500*decimals);
+        assertEq(sanctionToken.totalSupply(), 1500 * decimals);
     }
 
     function testTransfers() public {
-        sanctionToken.transfer(sanctionedUser, 100*decimals);
-        assertEq(sanctionToken.balanceOf(owner), 1400*decimals);
-        assertEq(sanctionToken.balanceOf(sanctionedUser), 100*decimals);
+        sanctionToken.transfer(sanctionedUser, 100 * decimals);
+        assertEq(sanctionToken.balanceOf(owner), 1400 * decimals);
+        assertEq(sanctionToken.balanceOf(sanctionedUser), 100 * decimals);
     }
 
     function testNotAllowedSanctioning() public {
@@ -51,7 +51,7 @@ contract SanctionTokenTest is Test {
         assertEq(sanctionToken.isAdmin(testUser), true);
     }
 
-    function testSanctioning() public { 
+    function testSanctioning() public {
         assertEq(sanctionToken.isSanctioned(sanctionedUser), false);
         vm.prank(admin0);
         sanctionToken.sanction(toSanction);
@@ -61,14 +61,14 @@ contract SanctionTokenTest is Test {
     function testReceiveAsSanctioned() public {
         testSanctioning();
         vm.expectRevert("Sanctioned: Cannot transfer to or from a sanctioned address");
-        sanctionToken.transfer(sanctionedUser, 200*decimals);
+        sanctionToken.transfer(sanctionedUser, 200 * decimals);
     }
 
     function testSendAsSanctioned() public {
         testSanctioning();
         vm.prank(sanctionedUser);
         vm.expectRevert("Sanctioned: Cannot transfer to or from a sanctioned address");
-        sanctionToken.transfer(testUser, 200*decimals);
+        sanctionToken.transfer(testUser, 200 * decimals);
     }
 
     function testUnsanction() public {
@@ -80,10 +80,10 @@ contract SanctionTokenTest is Test {
 
     function testUnsanctionAndSend() public {
         testTransfers();
-        testUnsanction(); 
+        testUnsanction();
         vm.prank(sanctionedUser);
-        sanctionToken.transfer(owner, 100*decimals);
-        assertEq(sanctionToken.balanceOf(owner), 1500*decimals);
+        sanctionToken.transfer(owner, 100 * decimals);
+        assertEq(sanctionToken.balanceOf(owner), 1500 * decimals);
         assertEq(sanctionToken.balanceOf(sanctionedUser), 0);
     }
 }

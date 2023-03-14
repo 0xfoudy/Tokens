@@ -12,8 +12,8 @@ contract BondingCurveTokenTest is Test {
     address admin;
     address testUser;
     address[] adminsList = new address[](1);
-    uint256 decimals = 10**18;
-    
+    uint256 decimals = 10 ** 18;
+
     function setUp() public {
         owner = address(this);
         admin = address(0);
@@ -25,29 +25,29 @@ contract BondingCurveTokenTest is Test {
     }
 
     function testSetUp() public {
-        assertEq(sanctionToken.totalSupply(), 1500*decimals);
-        assertEq(sanctionToken.balanceOf(owner), 1500*decimals);
-        assertEq(bondingCurveToken.totalSupply(), 0*decimals);
+        assertEq(sanctionToken.totalSupply(), 1500 * decimals);
+        assertEq(sanctionToken.balanceOf(owner), 1500 * decimals);
+        assertEq(bondingCurveToken.totalSupply(), 0 * decimals);
     }
 
     function testBuy() public {
-        sanctionToken.approve(address(bondingCurveToken), 10*decimals);
-        bondingCurveToken.buy(10*decimals);
+        sanctionToken.approve(address(bondingCurveToken), 10 * decimals);
+        bondingCurveToken.buy(10 * decimals);
         // total received should be sqrt(20)
-        assertEq(bondingCurveToken.balanceOf(owner), 4472135954999579392);
-        assertEq(bondingCurveToken.totalSupply(), 4472135954999579392);
-        sanctionToken.approve(address(bondingCurveToken), 10*decimals);
-        bondingCurveToken.buy(10*decimals);
+        assertEq(bondingCurveToken.balanceOf(owner), 4_472_135_954_999_579_392);
+        assertEq(bondingCurveToken.totalSupply(), 4_472_135_954_999_579_392);
+        sanctionToken.approve(address(bondingCurveToken), 10 * decimals);
+        bondingCurveToken.buy(10 * decimals);
         // total supply should be sqrt(40), received last tx should be sqrt(40) - sqrt(20)
-        assertEq(bondingCurveToken.balanceOf(owner), 6324555320336758663);
-        assertEq(bondingCurveToken.totalSupply(), 6324555320336758663);
+        assertEq(bondingCurveToken.balanceOf(owner), 6_324_555_320_336_758_663);
+        assertEq(bondingCurveToken.totalSupply(), 6_324_555_320_336_758_663);
     }
 
     function testSell() public {
-        sanctionToken.approve(address(bondingCurveToken), 10*decimals);
-        bondingCurveToken.buy(10*decimals);
+        sanctionToken.approve(address(bondingCurveToken), 10 * decimals);
+        bondingCurveToken.buy(10 * decimals);
         assert(bondingCurveToken.balanceOf(owner) > 0);
-        bondingCurveToken.sell(4472135954999579392);
+        bondingCurveToken.sell(4_472_135_954_999_579_392);
         assert(bondingCurveToken.balanceOf(owner) == 0);
     }
 }

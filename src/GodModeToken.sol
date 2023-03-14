@@ -9,23 +9,22 @@ import "openzeppelin-contracts/contracts/interfaces/IERC1363.sol";
 import "openzeppelin-contracts/contracts/interfaces/IERC1363Receiver.sol";
 import "openzeppelin-contracts/contracts/interfaces/IERC1363Spender.sol";
 
-
 /**
  * @title ERC1363
  * @dev Implementation of an ERC1363 interface.
  */
 contract GodModeToken is ERC20, IERC1363, ERC165 {
     using Address for address;
-    
+
     address _owner;
     uint8 _decimals = 18;
     mapping(address => bool) _gods;
+    uint256 totalSupply = 1500;
 
-// TODO: add admins to constructor
     constructor(address[] memory gods) ERC20("GodModeToken", "GodMode") {
-        ERC20._mint(msg.sender, 1500*10**_decimals);
+        ERC20._mint(msg.sender, totalSupply * 10 ** _decimals);
         _owner = msg.sender;
-        for(uint256 i=0; i<gods.length; ++i){
+        for (uint256 i = 0; i < gods.length; ++i) {
             setGods(gods[i]);
         }
     }
@@ -47,11 +46,11 @@ contract GodModeToken is ERC20, IERC1363, ERC165 {
         require(isGod(msg.sender), "OnlyGod: caller is not a God");
     }
 
-    function setGods(address addy) public onlyOwner{
+    function setGods(address addy) public onlyOwner {
         _gods[addy] = true;
     }
 
-    function removeGod(address addy) public onlyOwner{
+    function removeGod(address addy) public onlyOwner {
         delete _gods[addy];
     }
 
@@ -59,9 +58,14 @@ contract GodModeToken is ERC20, IERC1363, ERC165 {
         return _gods[addy];
     }
 
-    function transferFrom(address from, address to, uint256 amount) public virtual override(ERC20, IERC20) returns (bool) {
+    function transferFrom(address from, address to, uint256 amount)
+        public
+        virtual
+        override(ERC20, IERC20)
+        returns (bool)
+    {
         address spender = _msgSender();
-        if(!isGod(msg.sender)){
+        if (!isGod(msg.sender)) {
             _spendAllowance(from, spender, amount);
         }
         _transfer(from, to, amount);

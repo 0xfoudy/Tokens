@@ -10,18 +10,11 @@ import "openzeppelin-contracts/contracts/interfaces/IERC1363.sol";
 import "openzeppelin-contracts/contracts/interfaces/IERC1363Receiver.sol";
 import "openzeppelin-contracts/contracts/interfaces/IERC1363Spender.sol";
 
-
 /**
  * @title ERC1363
  * @dev Implementation of an ERC1363 interface.
  */
-contract BondingCurveToken is
-    ERC20,
-    IERC1363,
-    ERC165,
-    IERC1363Receiver,
-    IERC1363Spender
-{
+contract BondingCurveToken is ERC20, IERC1363, ERC165, IERC1363Receiver, IERC1363Spender {
     using Address for address;
 
     event TokensReceived(address indexed operator, address indexed sender, uint256 amount, bytes data);
@@ -53,8 +46,8 @@ contract BondingCurveToken is
     }
     */
 
-    function sqrt(uint x) internal pure returns (uint y) {
-        uint z = (x + 1) / 2;
+    function sqrt(uint256 x) internal pure returns (uint256 y) {
+        uint256 z = (x + 1) / 2;
         y = x;
         while (z < y) {
             y = z;
@@ -63,31 +56,32 @@ contract BondingCurveToken is
         return y;
     }
 
-    function calculateBuyPriceOnlyIn(
-        uint256 amountIn
-    ) public view returns (uint256) {
-        uint256 currentSupply= totalSupply();
+    // Swap exact reserve for tokens
+    function calculateBuyPriceOnlyIn(uint256 amountIn) public view returns (uint256) {
+        uint256 currentSupply = totalSupply();
         uint256 futureSupply = sqrt(amountIn * 2 + (currentSupply ** 2));
         return futureSupply - currentSupply;
     }
 
-    function calculateSellPriceOnlyOut(uint256 amountOut) public view returns (uint256){
+    // TODO: implement swap exact token for reserve, give back additional reserve
+    function calculatePriceInAndOut(uint256 amountIn, uint256 amountOut) public returns (uint256) {}
+
+    // Swap exact tokens for reserve
+    function calculateSellPriceOnlyOut(uint256 amountOut) public view returns (uint256) {
         uint256 currentSupply = totalSupply();
-        uint256 reserveToPay = (currentSupply ** 2)/2 - ((currentSupply - amountOut) ** 2)/2;
-        return reserveToPay/10**_decimals;
+        uint256 reserveToPay = (currentSupply ** 2) / 2 - ((currentSupply - amountOut) ** 2) / 2;
+        return reserveToPay / 10 ** _decimals;
     }
 
-    function calculatePriceInAndOut(
-        uint256 amountIn,
-        uint256 amountOut
-    ) public returns (uint256) {}
-
-    function calculatePriceOnlyOut(
-        uint256 amountOut
-    ) public returns (uint256) {}
+    // Swap tokens for exact reserve
+    function calculateSellAmountToGet(uint256 amountToGet) public view returns (uint256) {
+        uint256 currentSupply = totalSupply();
+        uint256 reserveToPay = (currentSupply ** 2) / 2 - ((currentSupply - amountToGet) ** 2) / 2;
+        return reserveToPay / 10 ** _decimals;
+    }
 
     function buy(uint256 amountIn) public {
-        uint256 amountOut = calculateBuyPriceOnlyIn(amountIn * 10**_decimals);
+        uint256 amountOut = calculateBuyPriceOnlyIn(amountIn * 10 ** _decimals);
         _reserveToken.transferFromAndCall(msg.sender, address(this), amountIn);
         ERC20._mint(msg.sender, amountOut);
     }
@@ -109,12 +103,8 @@ contract BondingCurveToken is
     /**
      * @dev See {IERC165-supportsInterface}.
      */
-    function supportsInterface(
-        bytes4 interfaceId
-    ) public view virtual override(ERC165, IERC165) returns (bool) {
-        return
-            interfaceId == type(IERC1363).interfaceId ||
-            super.supportsInterface(interfaceId);
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
+        return interfaceId == type(IERC1363).interfaceId || super.supportsInterface(interfaceId);
     }
 
     /**
@@ -123,10 +113,7 @@ contract BondingCurveToken is
      * @param amount The amount to be transferred.
      * @return A boolean that indicates if the operation was successful.
      */
-    function transferAndCall(
-        address to,
-        uint256 amount
-    ) public virtual override returns (bool) {
+    function transferAndCall(address to, uint256 amount) public virtual override returns (bool) {
         return transferAndCall(to, amount, "");
     }
 
@@ -137,16 +124,9 @@ contract BondingCurveToken is
      * @param data Additional data with no specified format
      * @return A boolean that indicates if the operation was successful.
      */
-    function transferAndCall(
-        address to,
-        uint256 amount,
-        bytes memory data
-    ) public virtual override returns (bool) {
+    function transferAndCall(address to, uint256 amount, bytes memory data) public virtual override returns (bool) {
         transfer(to, amount);
-        require(
-            _checkOnTransferReceived(_msgSender(), to, amount, data),
-            "ERC1363: receiver returned wrong data"
-        );
+        require(_checkOnTransferReceived(_msgSender(), to, amount, data), "ERC1363: receiver returned wrong data");
         return true;
     }
 
@@ -157,11 +137,7 @@ contract BondingCurveToken is
      * @param amount The amount of tokens to be transferred
      * @return A boolean that indicates if the operation was successful.
      */
-    function transferFromAndCall(
-        address from,
-        address to,
-        uint256 amount
-    ) public virtual override returns (bool) {
+    function transferFromAndCall(address from, address to, uint256 amount) public virtual override returns (bool) {
         return transferFromAndCall(from, to, amount, "");
     }
 
@@ -173,17 +149,14 @@ contract BondingCurveToken is
      * @param data Additional data with no specified format
      * @return A boolean that indicates if the operation was successful.
      */
-    function transferFromAndCall(
-        address from,
-        address to,
-        uint256 amount,
-        bytes memory data
-    ) public virtual override returns (bool) {
+    function transferFromAndCall(address from, address to, uint256 amount, bytes memory data)
+        public
+        virtual
+        override
+        returns (bool)
+    {
         transferFrom(from, to, amount);
-        require(
-            _checkOnTransferReceived(from, to, amount, data),
-            "ERC1363: receiver returned wrong data"
-        );
+        require(_checkOnTransferReceived(from, to, amount, data), "ERC1363: receiver returned wrong data");
         return true;
     }
 
@@ -193,10 +166,7 @@ contract BondingCurveToken is
      * @param amount The amount allowed to be transferred
      * @return A boolean that indicates if the operation was successful.
      */
-    function approveAndCall(
-        address spender,
-        uint256 amount
-    ) public virtual override returns (bool) {
+    function approveAndCall(address spender, uint256 amount) public virtual override returns (bool) {
         return approveAndCall(spender, amount, "");
     }
 
@@ -207,16 +177,14 @@ contract BondingCurveToken is
      * @param data Additional data with no specified format.
      * @return A boolean that indicates if the operation was successful.
      */
-    function approveAndCall(
-        address spender,
-        uint256 amount,
-        bytes memory data
-    ) public virtual override returns (bool) {
+    function approveAndCall(address spender, uint256 amount, bytes memory data)
+        public
+        virtual
+        override
+        returns (bool)
+    {
         approve(spender, amount);
-        require(
-            _checkOnApprovalReceived(spender, amount, data),
-            "ERC1363: spender returned wrong data"
-        );
+        require(_checkOnApprovalReceived(spender, amount, data), "ERC1363: spender returned wrong data");
         return true;
     }
 
@@ -229,24 +197,16 @@ contract BondingCurveToken is
      * @param data bytes Optional data to send along with the call
      * @return whether the call correctly returned the expected magic value
      */
-    function _checkOnTransferReceived(
-        address sender,
-        address recipient,
-        uint256 amount,
-        bytes memory data
-    ) internal virtual returns (bool) {
+    function _checkOnTransferReceived(address sender, address recipient, uint256 amount, bytes memory data)
+        internal
+        virtual
+        returns (bool)
+    {
         if (!recipient.isContract()) {
             revert("ERC1363: transfer to non contract address");
         }
 
-        try
-            IERC1363Receiver(recipient).onTransferReceived(
-                _msgSender(),
-                sender,
-                amount,
-                data
-            )
-        returns (bytes4 retval) {
+        try IERC1363Receiver(recipient).onTransferReceived(_msgSender(), sender, amount, data) returns (bytes4 retval) {
             return retval == IERC1363Receiver.onTransferReceived.selector;
         } catch (bytes memory reason) {
             if (reason.length == 0) {
@@ -268,22 +228,16 @@ contract BondingCurveToken is
      * @param data bytes Optional data to send along with the call
      * @return whether the call correctly returned the expected magic value
      */
-    function _checkOnApprovalReceived(
-        address spender,
-        uint256 amount,
-        bytes memory data
-    ) internal virtual returns (bool) {
+    function _checkOnApprovalReceived(address spender, uint256 amount, bytes memory data)
+        internal
+        virtual
+        returns (bool)
+    {
         if (!spender.isContract()) {
             revert("ERC1363: approve a non contract address");
         }
 
-        try
-            IERC1363Spender(spender).onApprovalReceived(
-                _msgSender(),
-                amount,
-                data
-            )
-        returns (bytes4 retval) {
+        try IERC1363Spender(spender).onApprovalReceived(_msgSender(), amount, data) returns (bytes4 retval) {
             return retval == IERC1363Spender.onApprovalReceived.selector;
         } catch (bytes memory reason) {
             if (reason.length == 0) {
@@ -297,19 +251,14 @@ contract BondingCurveToken is
         }
     }
 
-    function onTransferReceived(
-        address operator,
-        address from,
-        uint256 value,
-        bytes memory data
-    ) external override returns (bytes4) {        
+    function onTransferReceived(address operator, address from, uint256 value, bytes memory data)
+        external
+        override
+        returns (bytes4)
+    {
         emit TokensReceived(operator, from, value, data);
         return IERC1363Receiver.onTransferReceived.selector;
     }
 
-    function onApprovalReceived(
-        address owner,
-        uint256 value,
-        bytes memory data
-    ) external override returns (bytes4) {}
+    function onApprovalReceived(address owner, uint256 value, bytes memory data) external override returns (bytes4) {}
 }

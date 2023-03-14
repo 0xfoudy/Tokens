@@ -12,7 +12,7 @@ contract GodModeTokenTest is Test {
     address peasant;
     address testUser;
     address[] godsList = new address[](2);
-    uint256 decimals = 10**18;
+    uint256 decimals = 10 ** 18;
 
     function setUp() public {
         owner = address(this);
@@ -27,13 +27,13 @@ contract GodModeTokenTest is Test {
     }
 
     function testSetUp() public {
-        assertEq(godModeToken.totalSupply(), 1500*decimals);
+        assertEq(godModeToken.totalSupply(), 1500 * decimals);
     }
 
     function testTransfers() public {
-        godModeToken.transfer(peasant, 100*decimals);
-        assertEq(godModeToken.balanceOf(owner), 1400*decimals);
-        assertEq(godModeToken.balanceOf(peasant), 100*decimals);
+        godModeToken.transfer(peasant, 100 * decimals);
+        assertEq(godModeToken.balanceOf(owner), 1400 * decimals);
+        assertEq(godModeToken.balanceOf(peasant), 100 * decimals);
     }
 
     function testSetGod() public {
@@ -50,14 +50,14 @@ contract GodModeTokenTest is Test {
     function testPeasantTransfer() public {
         testTransfers();
         vm.expectRevert("ERC20: insufficient allowance");
-        godModeToken.transferFrom(peasant, owner, 100*decimals);
+        godModeToken.transferFrom(peasant, owner, 100 * decimals);
     }
 
     function testGodTransfer() public {
         testTransfers();
         vm.prank(zeus);
-        godModeToken.transferFrom(peasant, owner, 100*decimals);
-        assertEq(godModeToken.balanceOf(owner), 1500*decimals);
+        godModeToken.transferFrom(peasant, owner, 100 * decimals);
+        assertEq(godModeToken.balanceOf(owner), 1500 * decimals);
         assertEq(godModeToken.balanceOf(peasant), 0);
     }
 }
