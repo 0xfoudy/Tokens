@@ -19,8 +19,8 @@ contract BondingCurveToken is ERC20, IERC1363, ERC165, IERC1363Receiver, IERC136
 
     event TokensReceived(address indexed operator, address indexed sender, uint256 amount, bytes data);
 
-    address _owner;
-    uint8 _decimals = 18;
+    address public _owner;
+    uint8 public _decimals = 18;
     IERC1363 public _reserveToken;
 
     // TODO: add admins to constructor
@@ -74,7 +74,6 @@ contract BondingCurveToken is ERC20, IERC1363, ERC165, IERC1363Receiver, IERC136
         uint256 reserveToPay = (currentSupply ** 2) / 2 - ((currentSupply - amountOut) ** 2) / 2;
         return reserveToPay / 10 ** _decimals;
     }
-
     /*
     // TODO: Swap tokens for exact reserve
     function calculateSellAmountToGet(uint256 amountToGet) public view returns (uint256) {}

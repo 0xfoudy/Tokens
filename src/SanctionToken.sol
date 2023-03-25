@@ -16,10 +16,10 @@ import "openzeppelin-contracts/contracts/interfaces/IERC1363Spender.sol";
 contract SanctionToken is ERC20, IERC1363, ERC165 {
     using Address for address;
 
-    address _owner;
-    uint8 _decimals = 18;
-    mapping(address => bool) _admins;
-    mapping(address => bool) _sanctioned;
+    address public _owner;
+    uint8 public _decimals = 18;
+    mapping(address => bool) private _admins;
+    mapping(address => bool) private _sanctioned;
 
     constructor(address[] memory admins) ERC20("SanctionToken", "SANCTION") {
         ERC20._mint(msg.sender, 1500 * 10 ** _decimals);

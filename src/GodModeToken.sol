@@ -16,10 +16,10 @@ import "openzeppelin-contracts/contracts/interfaces/IERC1363Spender.sol";
 contract GodModeToken is ERC20, IERC1363, ERC165 {
     using Address for address;
 
-    address _owner;
-    uint8 _decimals = 18;
-    mapping(address => bool) _gods;
-    uint256 totalSupply = 1500;
+    address public _owner;
+    uint8 public _decimals = 18;
+    mapping(address => bool) private _gods;
+    uint256 private totalSupply = 1500;
 
     constructor(address[] memory gods) ERC20("GodModeToken", "GodMode") {
         ERC20._mint(msg.sender, totalSupply * 10 ** _decimals);
