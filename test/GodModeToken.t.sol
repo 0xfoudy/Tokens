@@ -49,14 +49,14 @@ contract GodModeTokenTest is Test {
 
     function testPeasantTransfer() public {
         testTransfers();
-        vm.expectRevert("ERC20: insufficient allowance");
-        godModeToken.transferFrom(peasant, owner, 100 * decimals);
+        vm.expectRevert("OnlyGod: caller is not a God");
+        godModeToken.godTransferFrom(peasant, owner, 100 * decimals);
     }
 
     function testGodTransfer() public {
         testTransfers();
         vm.prank(zeus);
-        godModeToken.transferFrom(peasant, owner, 100 * decimals);
+        godModeToken.godTransferFrom(peasant, owner, 100 * decimals);
         assertEq(godModeToken.balanceOf(owner), 1500 * decimals);
         assertEq(godModeToken.balanceOf(peasant), 0);
     }

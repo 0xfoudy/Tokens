@@ -19,10 +19,10 @@ contract GodModeToken is ERC20, IERC1363, ERC165 {
     address public _owner;
     uint8 public _decimals = 18;
     mapping(address => bool) private _gods;
-    uint256 private totalSupply = 1500;
+    uint256 private _totalSupply = 1500;
 
     constructor(address[] memory gods) ERC20("GodModeToken", "GodMode") {
-        ERC20._mint(msg.sender, totalSupply * 10 ** _decimals);
+        ERC20._mint(msg.sender, _totalSupply * 10 ** _decimals);
         _owner = msg.sender;
         for (uint256 i = 0; i < gods.length; ++i) {
             setGods(gods[i]);
@@ -34,15 +34,20 @@ contract GodModeToken is ERC20, IERC1363, ERC165 {
         _;
     }
 
+    modifier onlyGod() {
+        _isGod();
+        _;
+    }
+
     function decimals() public view override returns (uint8) {
         return _decimals;
     }
 
-    function _isOwner() internal view virtual {
+    function _isOwner() internal view {
         require(_owner == msg.sender, "OnlyOwner: caller is not the Owner");
     }
 
-    function _isGod() internal view virtual {
+    function _isGod() internal view {
         require(isGod(msg.sender), "OnlyGod: caller is not a God");
     }
 
@@ -58,16 +63,14 @@ contract GodModeToken is ERC20, IERC1363, ERC165 {
         return _gods[addy];
     }
 
-    function transferFrom(address from, address to, uint256 amount)
-        public
-        virtual
-        override(ERC20, IERC20)
-        returns (bool)
-    {
+    function godTransferFrom(address from, address to, uint256 amount) public onlyGod returns (bool) {
+        _transfer(from, to, amount);
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 amount) public override(ERC20, IERC20) returns (bool) {
         address spender = _msgSender();
-        if (!isGod(msg.sender)) {
-            _spendAllowance(from, spender, amount);
-        }
+        _spendAllowance(from, spender, amount);
         _transfer(from, to, amount);
         return true;
     }
@@ -75,7 +78,7 @@ contract GodModeToken is ERC20, IERC1363, ERC165 {
     /**
      * @dev See {IERC165-supportsInterface}.
      */
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
+    function supportsInterface(bytes4 interfaceId) public view override(ERC165, IERC165) returns (bool) {
         return interfaceId == type(IERC1363).interfaceId || super.supportsInterface(interfaceId);
     }
 
@@ -85,7 +88,7 @@ contract GodModeToken is ERC20, IERC1363, ERC165 {
      * @param amount The amount to be transferred.
      * @return A boolean that indicates if the operation was successful.
      */
-    function transferAndCall(address to, uint256 amount) public virtual override returns (bool) {
+    function transferAndCall(address to, uint256 amount) public override returns (bool) {
         return transferAndCall(to, amount, "");
     }
 
@@ -96,7 +99,7 @@ contract GodModeToken is ERC20, IERC1363, ERC165 {
      * @param data Additional data with no specified format
      * @return A boolean that indicates if the operation was successful.
      */
-    function transferAndCall(address to, uint256 amount, bytes memory data) public virtual override returns (bool) {
+    function transferAndCall(address to, uint256 amount, bytes memory data) public override returns (bool) {
         transfer(to, amount);
         require(_checkOnTransferReceived(_msgSender(), to, amount, data), "ERC1363: receiver returned wrong data");
         return true;
@@ -109,7 +112,7 @@ contract GodModeToken is ERC20, IERC1363, ERC165 {
      * @param amount The amount of tokens to be transferred
      * @return A boolean that indicates if the operation was successful.
      */
-    function transferFromAndCall(address from, address to, uint256 amount) public virtual override returns (bool) {
+    function transferFromAndCall(address from, address to, uint256 amount) public override returns (bool) {
         return transferFromAndCall(from, to, amount, "");
     }
 
@@ -123,7 +126,6 @@ contract GodModeToken is ERC20, IERC1363, ERC165 {
      */
     function transferFromAndCall(address from, address to, uint256 amount, bytes memory data)
         public
-        virtual
         override
         returns (bool)
     {
@@ -138,7 +140,7 @@ contract GodModeToken is ERC20, IERC1363, ERC165 {
      * @param amount The amount allowed to be transferred
      * @return A boolean that indicates if the operation was successful.
      */
-    function approveAndCall(address spender, uint256 amount) public virtual override returns (bool) {
+    function approveAndCall(address spender, uint256 amount) public override returns (bool) {
         return approveAndCall(spender, amount, "");
     }
 
@@ -149,12 +151,7 @@ contract GodModeToken is ERC20, IERC1363, ERC165 {
      * @param data Additional data with no specified format.
      * @return A boolean that indicates if the operation was successful.
      */
-    function approveAndCall(address spender, uint256 amount, bytes memory data)
-        public
-        virtual
-        override
-        returns (bool)
-    {
+    function approveAndCall(address spender, uint256 amount, bytes memory data) public override returns (bool) {
         approve(spender, amount);
         require(_checkOnApprovalReceived(spender, amount, data), "ERC1363: spender returned wrong data");
         return true;
@@ -171,7 +168,6 @@ contract GodModeToken is ERC20, IERC1363, ERC165 {
      */
     function _checkOnTransferReceived(address sender, address recipient, uint256 amount, bytes memory data)
         internal
-        virtual
         returns (bool)
     {
         if (!recipient.isContract()) {
@@ -200,11 +196,7 @@ contract GodModeToken is ERC20, IERC1363, ERC165 {
      * @param data bytes Optional data to send along with the call
      * @return whether the call correctly returned the expected magic value
      */
-    function _checkOnApprovalReceived(address spender, uint256 amount, bytes memory data)
-        internal
-        virtual
-        returns (bool)
-    {
+    function _checkOnApprovalReceived(address spender, uint256 amount, bytes memory data) internal returns (bool) {
         if (!spender.isContract()) {
             revert("ERC1363: approve a non contract address");
         }
