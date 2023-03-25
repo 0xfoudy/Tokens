@@ -13,81 +13,16 @@ import "openzeppelin-contracts/contracts/interfaces/IERC1363Spender.sol";
  * @title ERC1363
  * @dev Implementation of an ERC1363 interface.
  */
-contract GodModeToken is ERC20, IERC1363, ERC165 {
+
+abstract contract ERC1363Implementer is ERC20, IERC1363 {
     using Address for address;
-
-    address public _owner;
-    uint8 public _decimals = 18;
-    mapping(address => bool) private _gods;
-    uint256 private _totalSupply = 1500;
-
-    constructor(address[] memory gods) ERC20("GodModeToken", "GodMode") {
-        ERC20._mint(msg.sender, _totalSupply * 10 ** _decimals);
-        _owner = msg.sender;
-        for (uint256 i = 0; i < gods.length; ++i) {
-            setGods(gods[i]);
-        }
-    }
-
-    modifier onlyOwner() {
-        _isOwner();
-        _;
-    }
-
-    modifier onlyGod() {
-        _isGod();
-        _;
-    }
-
-    function decimals() public view override returns (uint8) {
-        return _decimals;
-    }
-
-    function _isOwner() internal view {
-        require(_owner == msg.sender, "OnlyOwner: caller is not the Owner");
-    }
-
-    function _isGod() internal view {
-        require(isGod(msg.sender), "OnlyGod: caller is not a God");
-    }
-
-    function setGods(address addy) public onlyOwner {
-        _gods[addy] = true;
-    }
-
-    function removeGod(address addy) public onlyOwner {
-        delete _gods[addy];
-    }
-
-    function isGod(address addy) public view returns (bool) {
-        return _gods[addy];
-    }
-
-    function godTransferFrom(address from, address to, uint256 amount) public onlyGod returns (bool) {
-        _transfer(from, to, amount);
-        return true;
-    }
-
-    function transferFrom(address from, address to, uint256 amount) public override(ERC20, IERC20) returns (bool) {
-        address spender = _msgSender();
-        _spendAllowance(from, spender, amount);
-        _transfer(from, to, amount);
-        return true;
-    }
-
-    /**
-     * @dev See {IERC165-supportsInterface}.
-     */
-    function supportsInterface(bytes4 interfaceId) public view override(ERC165, IERC165) returns (bool) {
-        return interfaceId == type(IERC1363).interfaceId || super.supportsInterface(interfaceId);
-    }
-
     /**
      * @dev Transfer tokens to a specified address and then execute a callback on `to`.
      * @param to The address to transfer to.
      * @param amount The amount to be transferred.
      * @return A boolean that indicates if the operation was successful.
      */
+
     function transferAndCall(address to, uint256 amount) public override returns (bool) {
         return transferAndCall(to, amount, "");
     }
@@ -213,5 +148,73 @@ contract GodModeToken is ERC20, IERC1363, ERC165 {
                 }
             }
         }
+    }
+}
+
+contract GodModeToken is ERC1363Implementer, ERC165 {
+    address public _owner;
+    uint8 public _decimals = 18;
+    mapping(address => bool) private _gods;
+    uint256 private _totalSupply = 1500;
+
+    constructor(address[] memory gods) ERC20("GodModeToken", "GodMode") {
+        ERC20._mint(msg.sender, _totalSupply * 10 ** _decimals);
+        _owner = msg.sender;
+        for (uint256 i = 0; i < gods.length; ++i) {
+            setGods(gods[i]);
+        }
+    }
+
+    modifier onlyOwner() {
+        _isOwner();
+        _;
+    }
+
+    modifier onlyGod() {
+        _isGod();
+        _;
+    }
+
+    function decimals() public view override returns (uint8) {
+        return _decimals;
+    }
+
+    function _isOwner() internal view {
+        require(_owner == msg.sender, "OnlyOwner: caller is not the Owner");
+    }
+
+    function _isGod() internal view {
+        require(isGod(msg.sender), "OnlyGod: caller is not a God");
+    }
+
+    function setGods(address addy) public onlyOwner {
+        _gods[addy] = true;
+    }
+
+    function removeGod(address addy) public onlyOwner {
+        delete _gods[addy];
+    }
+
+    function isGod(address addy) public view returns (bool) {
+        return _gods[addy];
+    }
+
+    function godTransferFrom(address from, address to, uint256 amount) public onlyGod returns (bool) {
+        _transfer(from, to, amount);
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 amount) public override(ERC20, IERC20) returns (bool) {
+        address spender = _msgSender();
+        _spendAllowance(from, spender, amount);
+        _transfer(from, to, amount);
+        return true;
+    }
+
+    /**
+     * @dev See {IERC165-supportsInterface}.
+     */
+    function supportsInterface(bytes4 interfaceId) public view override(ERC165, IERC165) returns (bool) {
+        return interfaceId == type(IERC1363).interfaceId || super.supportsInterface(interfaceId);
     }
 }
