@@ -19,9 +19,9 @@ contract BondingCurveToken is ERC20, IERC1363, ERC165, IERC1363Receiver, IERC136
 
     event TokensReceived(address indexed operator, address indexed sender, uint256 amount, bytes data);
 
-    address public _owner;
-    uint8 public _decimals = 18;
-    IERC1363 public _reserveToken;
+    address public immutable _owner;
+    uint8 public constant _decimals = 18;
+    IERC1363 public immutable _reserveToken;
 
     // TODO: add admins to constructor
     constructor(IERC1363 reserveToken) ERC20("BondingCurveToken", "BCT") {
