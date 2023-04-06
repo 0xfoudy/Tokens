@@ -71,7 +71,7 @@ contract BondingCurveToken is ERC20, IERC1363, ERC165, IERC1363Receiver, IERC136
     // Swap exact tokens for reserve
     function calculateSellPriceOnlyOut(uint256 amountOut) public view returns (uint256) {
         uint256 currentSupply = totalSupply();
-        uint256 reserveToPay = (currentSupply ** 2) / 2 - ((currentSupply - amountOut) ** 2) / 2;
+        uint256 reserveToPay = ((currentSupply ** 2) - ((currentSupply - amountOut) ** 2)) / 2;
         return reserveToPay / 10 ** _decimals;
     }
     /*
