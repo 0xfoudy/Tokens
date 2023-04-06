@@ -29,9 +29,11 @@ contract EchidnaBonding {
     _amountIn = 1 + (_amountIn % 1500);
     // Action
     uint256 preBuyAmountToReceive = bondingToken.calculateBuyPriceOnlyIn(_amountIn * 10**18);
+    uint256 oldSupply = bondingToken.totalSupply();
     reserveToken.approve(address(bondingToken), _amountIn);
     try bondingToken.buy(_amountIn){
       assert(preBuyAmountToReceive > bondingToken.calculateBuyPriceOnlyIn(_amountIn * 10**18));
+      assert(oldSupply + preBuyAmountToReceive == bondingToken.totalSupply());
     } catch (bytes memory err) {
       assert(false);
     }
@@ -42,8 +44,10 @@ contract EchidnaBonding {
     _amountOut = 1 + (_amountOut % bondingToken.balanceOf(address(this)));
     // Action
     uint256 preSellPrice = bondingToken.calculateSellPriceOnlyOut(_amountOut * 10**18);
+    uint256 preSellSupply = bondingToken.totalSupply();
     try bondingToken.sell(_amountOut){
       assert(preSellPrice < bondingToken.calculateSellPriceOnlyOut(_amountOut * 10**18));
+      assert(preSellSupply + preSellPrice == bondingToken.totalSupply());
     } catch (bytes memory err) {
       assert(false);
     }
